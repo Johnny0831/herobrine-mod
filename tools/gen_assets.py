@@ -1,10 +1,10 @@
-"""Gera as texturas (Espreitador + Corrompido) e o código do modelo do Corrompido a partir de uma única especificação."""
+"""Gera as texturas (O Oco + Ceifador + Alucinação + itens) e o código do modelo do Corrompido a partir de uma única especificação."""
 import random, os
 from PIL import Image
 random.seed(20261114)
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-TEX = ROOT + "/src/main/resources/assets/herobrine/textures/entity/"
-JAVA = ROOT + "/src/main/java/com/herobrinemod/CorruptedHerobrineModel.java"
+TEX = ROOT + "/src/main/resources/assets/hollowvigil/textures/entity/"
+JAVA = ROOT + "/src/main/java/com/hollowvigil/HollowReaperModel.java"
 
 def clampc(c): return tuple(max(0, min(255, int(x))) for x in c)
 def shade(c, f): return clampc([x * f for x in c])
@@ -161,13 +161,13 @@ for (bu, bv, pu, pv) in ((0, 16, 0, 32), (16, 48, 0, 48)):
             y = y0 + 8 - k
             for x in range(x0, x0 + fw):
                 if random.random() < 0.6 * (3 - k) / 3: S1.clear(x, y)
-S1.img.save(TEX + "herobrine.png")
+S1.img.save(TEX + "hollow.png")
 
 E1 = P(64, 64)
 for (a, b) in ((1, 2), (5, 6)):
     for x in range(a, b + 1):
         for y in range(3, 5): E1.put(fx + x, fy + y, WHITE)
-E1.img.save(TEX + "herobrine_eyes.png")
+E1.img.save(TEX + "hollow_eyes.png")
 
 # ============================================================ CORROMPIDO (spec compartilhada)
 S = []
@@ -274,8 +274,8 @@ for p in S:
             for xx in range(a, b + 1):
                 for yy in range(3, 5): E.put(ef[0] + xx, ef[1] + yy, WHITE)
         for (ex_, ey_) in ((1, 1), (3, 0), (5, 1)): E.put(ef[0] + ex_, ef[1] + ey_, WHITE)
-C.img.save(TEX + "herobrine_corrupted.png")
-E.img.save(TEX + "herobrine_corrupted_eyes.png")
+C.img.save(TEX + "hollow_reaper.png")
+E.img.save(TEX + "hollow_reaper_eyes.png")
 
 # ============================================================ CÓDIGO JAVA DO MODELO
 def jf(v):
@@ -298,3 +298,65 @@ TEMPLATE = open(os.path.join(os.path.dirname(__file__), "model_template.java.txt
 out = TEMPLATE.replace("//@@FIELDS@@", fields).replace("//@@CTOR@@", "\n".join(ctor)).replace("//@@LAYER@@", "\n".join(layer))
 open(JAVA, "w").write(out)
 print("partes:", len(S))
+
+
+# ============================================================ ALUCINAÇÃO (silhueta semitransparente)
+H = P(64, 64)
+for (u, v, w, h, d) in ((0, 0, 8, 8, 8), (16, 16, 8, 12, 4), (40, 16, 4, 12, 4), (32, 48, 4, 12, 4), (0, 16, 4, 12, 4), (16, 48, 4, 12, 4)):
+    H.fbox(u, v, w, h, d, (10, 10, 18), grad=0.35, var=5)
+    H.ragged(u, v, w, h, d, 3, 0.5)
+for x in range(64):
+    for y in range(64):
+        r_, g_, b_, a_ = H.px[x, y]
+        if a_: H.px[x, y] = (r_, g_, b_, 205)
+H.img.save(TEX + "hallucination.png")
+HE = P(64, 64)
+for (a, b) in ((1, 2), (5, 6)):
+    for x in range(a, b + 1):
+        for y in range(3, 5): HE.put(8 + x, 8 + y, WHITE)
+HE.img.save(TEX + "hallucination_eyes.png")
+
+# ============================================================ ITENS 16x16 (arte original)
+ITEMS = ROOT + "/src/main/resources/assets/hollowvigil/textures/item/"
+os.makedirs(ITEMS, exist_ok=True)
+
+def from_art(rows, palette, size=16):
+    im = Image.new("RGBA", (size, size), (0, 0, 0, 0)); pp = im.load()
+    for y, row in enumerate(rows):
+        for x, ch in enumerate(row):
+            if ch in palette: pp[x, y] = palette[ch] + (255,)
+    return im
+
+charm = ["................", "......XXXX......", ".....X....X.....", ".....X....X.....", "....RRRRRRRR....",
+         "...RRDDDDDDRR...", "..RRDDDWWDDDRR..", "..RDDDWWWWDDDR..", "..RDDDWWWWDDDR..", "..RRDDDWWDDDRR..",
+         "...RRDDDDDDRR...", "....RRRRRRRR....", ".....R.RR.R.....", "......R..R......", "................", "................"]
+from_art(charm, {'X': (120, 108, 92), 'R': (206, 198, 176), 'D': (22, 22, 30), 'W': (250, 250, 255)}).save(ITEMS + "sanity_charm.png")
+
+heart_rows = ["...XXXX...XXXX..", "..XXXXXX.XXXXXX.", ".XXXXXXXXXXXXXXX", ".XXXXXXXXXXXXXXX", ".XXXXXXXXXXXXXXX",
+              "..XXXXXXXXXXXXX.", "...XXXXXXXXXXX..", "....XXXXXXXXX...", ".....XXXXXXX....", "......XXXXX.....",
+              ".......XXX......", "........X......."]
+heart = ["................"] * 2 + heart_rows
+heart += ["................"] * (16 - len(heart))
+hi = from_art(heart, {'X': (58, 10, 20)})
+hp = hi.load()
+for y in range(16):
+    for x in range(16):
+        if hp[x, y][3]:
+            f = 1.0 + 0.5 * max(0, (7 - x - (y - 2) * 0.5)) / 7 - 0.02 * (y - 2)
+            hp[x, y] = tuple(max(0, min(255, int(c * f))) for c in hp[x, y][:3]) + (255,)
+            if x in (1, 14) or y in (4, 13): hp[x, y] = (30, 4, 10, 255)
+for (x, y) in ((8, 4), (7, 5), (8, 6), (7, 7), (8, 8), (8, 9)): hp[x, y] = (240, 232, 236, 255)
+for (x, y) in ((9, 5), (6, 6), (9, 7), (7, 8)): hp[x, y] = (150, 40, 60, 255)
+hi.save(ITEMS + "hollow_heart.png")
+
+from PIL import ImageDraw
+dg = Image.new("RGBA", (16, 16), (0, 0, 0, 0)); dd = ImageDraw.Draw(dg)
+dd.line([(5, 10), (14, 1)], fill=(222, 224, 236, 255), width=2)     # lâmina
+dd.line([(6, 11), (14, 3)], fill=(150, 152, 172, 255), width=1)     # sulco
+dd.point([(15, 0), (14, 1)], fill=(255, 255, 255, 255))             # brilho da ponta
+dd.line([(2, 8), (8, 14)], fill=(88, 88, 104, 255), width=2)        # guarda
+dd.line([(4, 11), (1, 14)], fill=(34, 28, 38, 255), width=2)        # cabo
+dd.point([(3, 12), (2, 13)], fill=(120, 20, 30, 255))               # amarração
+dd.point([(0, 15)], fill=(250, 250, 255, 255))                      # pomo
+dg.save(ITEMS + "hollow_dagger.png")
+print("itens ok")

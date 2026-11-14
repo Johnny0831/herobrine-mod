@@ -3,19 +3,19 @@ loaderVersion="[47,)"
 license="MIT"
 
 [[mods]]
-modId="herobrine"
+modId="hollowvigil"
 version="1.0.0"
-displayName="Herobrine"
-description='''Herobrine aparece à noite, observa você de longe e some quando você o encara.'''
+displayName="Hollow Vigil"
+description='''Uma presença oca observa você. Sanidade, honra, possessão e alucinações que matam.'''
 
-[[dependencies.herobrine]]
+[[dependencies.hollowvigil]]
 modId="forge"
 mandatory=true
 versionRange="[47,)"
 ordering="NONE"
 side="BOTH"
 
-[[dependencies.herobrine]]
+[[dependencies.hollowvigil]]
 modId="minecraft"
 mandatory=true
 versionRange="[1.20.1,1.21)"

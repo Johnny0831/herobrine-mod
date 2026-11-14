@@ -1,4 +1,4 @@
-package com.herobrinemod;
+package com.hollowvigil;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -18,14 +18,14 @@ import net.minecraft.util.Mth;
  * Criatura original: 3,2 blocos, corcunda, pescoço longo, crânio com espinhos, caixa torácica exposta,
  * braços articulados com garras, dois braços finos extras, pernas digitígradas e trapos balançando.
  */
-public class CorruptedHerobrineModel<T extends HerobrineCorruptedEntity> extends EntityModel<T> {
+public class HollowReaperModel<T extends HollowReaperEntity> extends EntityModel<T> {
     public static final ModelLayerLocation LAYER =
-            new ModelLayerLocation(new ResourceLocation(HerobrineMod.MODID, "herobrine_corrupted"), "main");
+            new ModelLayerLocation(new ResourceLocation(HollowVigilMod.MODID, "hollow_reaper"), "main");
 
     private final ModelPart root;
 //@@FIELDS@@
 
-    public CorruptedHerobrineModel(ModelPart root) {
+    public HollowReaperModel(ModelPart root) {
         this.root = root;
 //@@CTOR@@
     }
