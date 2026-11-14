@@ -1,0 +1,193 @@
+package com.herobrinemod;
+
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.goal.FloatGoal;
+import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
+import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
+import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
+import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
+import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+
+/**
+ * Herobrine Corrompido: 3,2 blocos de altura, 4 braços, mandíbula que se abre demais.
+ * Caça o jogador, teleporta para as costas dele, escurece a visão e fica mais rápido ferido.
+ */
+public class HerobrineCorruptedEntity extends Monster {
+    private int blinkCooldown = 100;
+    private boolean enraged = false;
+
+    public HerobrineCorruptedEntity(EntityType<? extends Monster> type, Level level) {
+        super(type, level);
+        this.setPersistenceRequired();
+        this.xpReward = 50;
+    }
+
+    public static AttributeSupplier.Builder createAttributes() {
+        return Monster.createMonsterAttributes()
+                .add(Attributes.MAX_HEALTH, 120.0D)
+                .add(Attributes.MOVEMENT_SPEED, 0.34D)
+                .add(Attributes.ATTACK_DAMAGE, 9.0D)
+                .add(Attributes.ATTACK_KNOCKBACK, 1.0D)
+                .add(Attributes.ARMOR, 6.0D)
+                .add(Attributes.KNOCKBACK_RESISTANCE, 0.6D)
+                .add(Attributes.FOLLOW_RANGE, 48.0D);
+    }
+
+    @Override
+    protected void registerGoals() {
+        this.goalSelector.addGoal(0, new FloatGoal(this));
+        this.goalSelector.addGoal(1, new MeleeAttackGoal(this, 1.15D, false));
+        this.goalSelector.addGoal(2, new WaterAvoidingRandomStrollGoal(this, 0.8D));
+        this.goalSelector.addGoal(3, new LookAtPlayerGoal(this, Player.class, 48.0F));
+        this.goalSelector.addGoal(4, new RandomLookAroundGoal(this));
+        this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
+        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, false));
+    }
+
+    @Override
+    public void aiStep() {
+        super.aiStep();
+        if (this.level().isClientSide) return;
+
+        if (this.tickCount > HerobrineConfig.CORRUPTED_LIFETIME_SECONDS.get() * 20) {
+            vanish();
+            return;
+        }
+
+        if (!enraged && this.getHealth() < this.getMaxHealth() * 0.5F) {
+            enraged = true;
+            this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.44D);
+            for (ServerPlayer sp : nearbyPlayers(32.0D)) {
+                Sfx.play(sp, "entity.ender_dragon.growl", 1.6F, 0.4F, getX(), getY() + 2.0D, getZ());
+                HorrorNet.shake(sp, 30, 2.5F);
+            }
+        }
+
+        LivingEntity target = this.getTarget();
+        if (target instanceof ServerPlayer sp) {
+            double dist = this.distanceTo(sp);
+            if (this.tickCount % 20 == 0) {
+                float vol = (float) Math.max(0.3D, 1.4D - dist / 30.0D);
+                Sfx.atPlayer(sp, "entity.warden.heartbeat", vol, 1.0F + (float) Math.max(0, (20 - dist) / 40.0D));
+                if (dist < 24.0D && sp.hasLineOfSight(this)) {
+                    sp.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 60, 0, false, false));
+                }
+            }
+            if (this.random.nextInt(260) == 0) {
+                Sfx.behind(sp, "ambient.soul_sand_valley.mood", 1.0F, 0.6F, 6.0D);
+            }
+            if (--blinkCooldown <= 0 && dist > 7.0D) {
+                blinkCooldown = (enraged ? 50 : 90) + this.random.nextInt(80);
+                if (blinkBehind(sp)) {
+                    Sfx.play(sp, "entity.enderman.teleport", 1.0F, 0.4F, getX(), getY() + 1.5D, getZ());
+                    HorrorNet.shake(sp, 12, 1.5F);
+                }
+            }
+        }
+    }
+
+    private java.util.List<ServerPlayer> nearbyPlayers(double r) {
+        return this.level().getEntitiesOfClass(ServerPlayer.class, this.getBoundingBox().inflate(r));
+    }
+
+    /** Teleporta para ~3 blocos atrás do alvo (se houver espaço). */
+    private boolean blinkBehind(LivingEntity t) {
+        Vec3 look = t.getLookAngle();
+        Vec3 flat = new Vec3(look.x, 0, look.z);
+        flat = flat.lengthSqr() < 1.0E-4 ? new Vec3(0, 0, 1) : flat.normalize();
+        for (int i = 0; i < 6; i++) {
+            Vec3 d = t.position().subtract(flat.scale(2.5D + i * 0.4D));
+            AABB box = this.getBoundingBox().move(d.x - getX(), t.getY() - getY(), d.z - getZ());
+            if (this.level().noCollision(this, box)) {
+                poof();
+                this.moveTo(d.x, t.getY(), d.z, t.getYRot() + 180.0F, 0.0F);
+                this.getNavigation().stop();
+                poof();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void poof() {
+        if (this.level() instanceof ServerLevel s) {
+            s.sendParticles(ParticleTypes.LARGE_SMOKE, getX(), getY() + 1.5D, getZ(), 30, 0.4D, 1.2D, 0.4D, 0.02D);
+        }
+    }
+
+    @Override
+    public boolean doHurtTarget(Entity target) {
+        boolean hit = super.doHurtTarget(target);
+        if (hit && target instanceof LivingEntity living) {
+            living.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 100, 0, false, false));
+            living.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 120, 0, false, false));
+            living.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 0, false, false));
+            if (living instanceof ServerPlayer sp) {
+                Sfx.play(sp, "entity.ghast.scream", 1.0F, 0.5F, getX(), getY() + 2.0D, getZ());
+                HorrorNet.shake(sp, 15, 3.0F);
+                HorrorNet.flash(sp, 6);
+            }
+        }
+        return hit;
+    }
+
+    @Override
+    public boolean hurt(DamageSource source, float amount) {
+        boolean result = super.hurt(source, amount);
+        if (result && !this.level().isClientSide && source.getEntity() instanceof LivingEntity attacker
+                && this.random.nextFloat() < 0.25F) {
+            blinkBehind(attacker);
+        }
+        return result;
+    }
+
+    @Override
+    public void die(DamageSource source) {
+        super.die(source);
+        if (!this.level().isClientSide) {
+            for (ServerPlayer sp : nearbyPlayers(40.0D)) {
+                Sfx.play(sp, "entity.enderman.scream", 1.5F, 0.3F, getX(), getY() + 2.0D, getZ());
+                HorrorNet.shake(sp, 40, 3.0F);
+                HorrorNet.flash(sp, 10);
+            }
+        }
+    }
+
+    public void vanish() {
+        poof();
+        this.discard();
+    }
+
+    @Override
+    protected SoundEvent getHurtSound(DamageSource src) {
+        return SoundEvents.ENDERMAN_HURT;
+    }
+
+    @Override
+    protected SoundEvent getDeathSound() {
+        return SoundEvents.ENDERMAN_DEATH;
+    }
+
+    @Override
+    public boolean removeWhenFarAway(double distance) {
+        return false;
+    }
+}
