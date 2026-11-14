@@ -1,0 +1,103 @@
+package com.herobrinemod;
+
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.model.EntityModel;
+import net.minecraft.client.model.geom.ModelLayerLocation;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.model.geom.PartPose;
+import net.minecraft.client.model.geom.builders.CubeListBuilder;
+import net.minecraft.client.model.geom.builders.LayerDefinition;
+import net.minecraft.client.model.geom.builders.MeshDefinition;
+import net.minecraft.client.model.geom.builders.PartDefinition;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
+
+/**
+ * GERADO por tools/gen_assets.py (partes, UVs e texturas vêm da mesma especificação).
+ * Criatura original: 3,2 blocos, corcunda, pescoço longo, crânio com espinhos, caixa torácica exposta,
+ * braços articulados com garras, dois braços finos extras, pernas digitígradas e trapos balançando.
+ */
+public class CorruptedHerobrineModel<T extends HerobrineCorruptedEntity> extends EntityModel<T> {
+    public static final ModelLayerLocation LAYER =
+            new ModelLayerLocation(new ResourceLocation(HerobrineMod.MODID, "herobrine_corrupted"), "main");
+
+    private final ModelPart root;
+//@@FIELDS@@
+
+    public CorruptedHerobrineModel(ModelPart root) {
+        this.root = root;
+//@@CTOR@@
+    }
+
+    public static LayerDefinition createBodyLayer() {
+        MeshDefinition mesh = new MeshDefinition();
+        PartDefinition root = mesh.getRoot();
+//@@LAYER@@
+        return LayerDefinition.create(mesh, 128, 128);
+    }
+
+    @Override
+    public void setupAnim(T e, float limbSwing, float limbSwingAmount, float age, float netHeadYaw, float headPitch) {
+        boolean aggro = e.isAggressive();
+        float rad = Mth.DEG_TO_RAD;
+        float walk = limbSwing * 0.6662F;
+        float amt = Math.min(1.0F, limbSwingAmount);
+        float sway = Mth.sin(age * 0.06F);
+
+        // tronco corcunda e cabeça compensando para continuar olhando para frente
+        body.xRot = 0.35F + sway * 0.03F + (aggro ? 0.15F : 0.0F);
+        body.yRot = Mth.cos(walk) * 0.18F * amt;
+        neck.xRot = 0.25F;
+        head.xRot = headPitch * rad - 0.6F - (aggro ? 0.15F : 0.0F);
+        head.yRot = netHeadYaw * rad * 0.8F - body.yRot;
+        head.zRot = Mth.sin(age * 1.3F) * 0.05F + (Mth.sin(age * 0.17F) > 0.93F ? 0.4F : 0.0F); // tique
+        jaw.xRot = aggro ? 0.95F + Mth.sin(age * 0.8F) * 0.25F : 0.2F + Mth.sin(age * 0.1F) * 0.05F;
+
+        // braços principais
+        float swingR = Mth.cos(walk + Mth.PI) * 0.9F * amt;
+        float swingL = Mth.cos(walk) * 0.9F * amt;
+        if (aggro) {
+            arm_u_r.xRot = -1.55F + Mth.sin(age * 0.6F) * 0.10F;
+            arm_u_l.xRot = -1.55F - Mth.sin(age * 0.6F) * 0.10F;
+            arm_f_r.xRot = -0.35F + Mth.sin(age * 0.9F) * 0.15F;
+            arm_f_l.xRot = -0.35F - Mth.sin(age * 0.9F) * 0.15F;
+        } else {
+            arm_u_r.xRot = -0.3F + swingR;
+            arm_u_l.xRot = -0.3F + swingL;
+            arm_f_r.xRot = -0.25F - Math.abs(swingR) * 0.4F;
+            arm_f_l.xRot = -0.25F - Math.abs(swingL) * 0.4F;
+        }
+        arm_u_r.zRot = 0.12F;
+        arm_u_l.zRot = -0.12F;
+
+        // braços extras: aranha nervosa
+        ex_u_r.xRot = -0.4F + Mth.sin(age * 0.7F) * 0.4F;
+        ex_u_l.xRot = -0.4F + Mth.sin(age * 0.7F + 2.0F) * 0.4F;
+        ex_u_r.zRot = 0.7F + Mth.sin(age * 0.9F) * 0.2F;
+        ex_u_l.zRot = -0.7F - Mth.sin(age * 0.9F + 1.0F) * 0.2F;
+        ex_f_r.xRot = -0.8F + Mth.sin(age * 1.1F) * 0.5F;
+        ex_f_l.xRot = -0.8F + Mth.sin(age * 1.1F + 1.5F) * 0.5F;
+
+        // pernas digitígradas (coxa para frente, canela para trás, pé sempre plano)
+        float legR = Mth.cos(walk) * 0.9F * amt;
+        float legL = Mth.cos(walk + Mth.PI) * 0.9F * amt;
+        thigh_r.xRot = -0.55F + legR;
+        shin_r.xRot = 1.15F - legR * 0.5F;
+        foot_r.xRot = -(thigh_r.xRot + shin_r.xRot);
+        thigh_l.xRot = -0.55F + legL;
+        shin_l.xRot = 1.15F - legL * 0.5F;
+        foot_l.xRot = -(thigh_l.xRot + shin_l.xRot);
+
+        // trapos
+        cloth_f.xRot = -0.35F + amt * 0.5F + Mth.sin(age * 0.10F) * 0.06F;
+        cloth_bl.xRot = -0.25F + amt * 0.5F + Mth.sin(age * 0.10F + 1.0F) * 0.07F;
+        cloth_br.xRot = -0.25F + amt * 0.5F + Mth.sin(age * 0.10F + 2.0F) * 0.07F;
+    }
+
+    @Override
+    public void renderToBuffer(PoseStack ps, VertexConsumer buf, int light, int overlay,
+                               float r, float g, float b, float a) {
+        root.render(ps, buf, light, overlay, r, g, b, a);
+    }
+}

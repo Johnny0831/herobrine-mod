@@ -12,7 +12,8 @@ import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 /**
- * /herobrine haunt  <jogador> [stalker|corrupted]   -> inicia presságios e depois a aparição
+ * /herobrine scare  <jogador>                       -> demo imediata: sons, chat, neblina, tremor e flash
+ * /herobrine haunt  <jogador> [stalker|corrupted]   -> presságios e depois a aparição
  * /herobrine appear <jogador> [stalker|corrupted]   -> aparição imediata
  * /herobrine dread  <jogador> <0-30>                -> define o nível de pavor
  */
@@ -21,6 +22,8 @@ public class HerobrineCommands {
     public void onRegister(RegisterCommandsEvent e) {
         e.getDispatcher().register(Commands.literal("herobrine")
                 .requires(s -> s.hasPermission(2))
+                .then(Commands.literal("scare")
+                        .then(Commands.argument("target", EntityArgument.player()).executes(this::scare)))
                 .then(Commands.literal("haunt")
                         .then(Commands.argument("target", EntityArgument.player())
                                 .executes(c -> haunt(c, null, false))
@@ -35,6 +38,13 @@ public class HerobrineCommands {
                         .then(Commands.argument("target", EntityArgument.player())
                                 .then(Commands.argument("value", IntegerArgumentType.integer(0, 30))
                                         .executes(this::dread)))));
+    }
+
+    private int scare(CommandContext<CommandSourceStack> c) throws CommandSyntaxException {
+        ServerPlayer p = EntityArgument.getPlayer(c, "target");
+        HorrorDirector.INSTANCE.demoScare(p);
+        c.getSource().sendSuccess(() -> Component.literal("Demo de susto -> " + p.getName().getString()), true);
+        return 1;
     }
 
     private int haunt(CommandContext<CommandSourceStack> c, Boolean corrupted, boolean immediate)

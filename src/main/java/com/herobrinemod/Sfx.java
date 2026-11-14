@@ -15,7 +15,7 @@ public final class Sfx {
 
     public static void play(ServerPlayer p, SoundEvent ev, float vol, float pitch, double x, double y, double z) {
         if (ev == null) return;
-        p.connection.send(new ClientboundSoundPacket(Holder.direct(ev), SoundSource.AMBIENT,
+        p.connection.send(new ClientboundSoundPacket(BuiltInRegistries.SOUND_EVENT.wrapAsHolder(ev), SoundSource.AMBIENT,
                 x, y, z, vol, pitch, p.getRandom().nextLong()));
     }
 

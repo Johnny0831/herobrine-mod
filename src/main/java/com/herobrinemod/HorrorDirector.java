@@ -99,6 +99,14 @@ public class HorrorDirector {
     }
 
     @SubscribeEvent
+    public void onLogin(PlayerEvent.PlayerLoggedInEvent e) {
+        if (HerobrineConfig.WELCOME_MESSAGE.get() && e.getEntity() instanceof ServerPlayer sp) {
+            sp.sendSystemMessage(Component.translatable("herobrine.welcome")
+                    .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
+        }
+    }
+
+    @SubscribeEvent
     public void onLogout(PlayerEvent.PlayerLoggedOutEvent e) {
         haunts.remove(e.getEntity().getUUID());
     }
@@ -109,6 +117,8 @@ public class HorrorDirector {
     public void startHaunt(ServerPlayer sp, Boolean forceCorrupted, boolean immediate) {
         Haunt h = haunts.computeIfAbsent(sp.getUUID(), k -> new Haunt());
         h.corrupted = forceCorrupted != null ? forceCorrupted : rollCorrupted(sp);
+        HerobrineMod.LOGGER.info("Herobrine: evento iniciado para {} (corrompido={}, imediato={})",
+                sp.getName().getString(), h.corrupted, immediate);
         h.joinSent = false;
         h.chatSent = false;
         h.fogSent = false;
@@ -130,6 +140,31 @@ public class HorrorDirector {
         CompoundTag persisted = root.getCompound(Player.PERSISTED_NBT_TAG);
         persisted.putInt(DREAD_KEY, value);
         root.put(Player.PERSISTED_NBT_TAG, persisted);
+    }
+
+    /** Demonstração imediata de todos os efeitos sensoriais (som, chat, neblina, tremor, flash) - útil para testar. */
+    public void demoScare(ServerPlayer sp) {
+        ServerLevel level = (ServerLevel) sp.level();
+        sp.sendSystemMessage(Component.translatable("multiplayer.player.joined", "Herobrine").withStyle(ChatFormatting.YELLOW));
+        Sfx.atPlayer(sp, "ambient.cave", 1.0F, 0.6F);
+        HorrorNet.fog(sp, 400);
+        footsteps(sp, level, 5);
+        schedule(60, () -> {
+            Sfx.atPlayer(sp, "entity.warden.heartbeat", 1.2F, 1.0F);
+            HorrorNet.shake(sp, 30, 1.0F);
+        });
+        schedule(80, () -> Sfx.atPlayer(sp, "entity.warden.heartbeat", 1.4F, 1.2F));
+        schedule(100, () -> {
+            fakeChat(sp);
+            Sfx.behind(sp, "entity.enderman.stare", 1.0F, 0.5F, 6.0D);
+        });
+        schedule(140, () -> {
+            Sfx.behind(sp, "entity.enderman.scream", 1.5F, 0.5F, 2.0D);
+            HorrorNet.flash(sp, 12);
+            HorrorNet.shake(sp, 25, 4.0F);
+        });
+        schedule(180, () -> sp.sendSystemMessage(Component.translatable("multiplayer.player.left", "Herobrine")
+                .withStyle(ChatFormatting.YELLOW)));
     }
 
     // ------------------------------------------------------------ fases
@@ -281,7 +316,7 @@ public class HorrorDirector {
             double rnd = sp.getRandom().nextDouble();
             double ang = h.corrupted
                     ? base + Math.PI + (sp.getRandom().nextDouble() - 0.5D)
-                    : base + (rnd < 0.5D ? -1 : 1) * (0.35D + sp.getRandom().nextDouble() * 0.7D);
+                    : base + (rnd < 0.5D ? -1 : 1) * (0.25D + sp.getRandom().nextDouble() * 0.5D);
             double dist = h.corrupted ? 16.0D + rnd * 8.0D : 20.0D + rnd * 10.0D;
             if (cave) dist = Math.min(dist, 12.0D);
             spot = findSpot(level, sp, sp.getX() + Math.cos(ang) * dist, sp.getZ() + Math.sin(ang) * dist);
@@ -308,6 +343,7 @@ public class HorrorDirector {
             Sfx.play(sp, "entity.enderman.stare", 1.0F, 0.5F, mob.getX(), mob.getY() + 1.6D, mob.getZ());
             HorrorNet.shake(sp, 15, 0.8F);
         }
+        HerobrineMod.LOGGER.info("Herobrine: apareceu em {} (corrompido={})", spot, h.corrupted);
         h.entity = mob.getUUID();
         h.phase = Phase.APPEAR;
         h.ticks = 0;

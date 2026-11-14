@@ -8,5 +8,6 @@
   "herobrine.chat.3": "don't look back",
   "herobrine.chat.4": "you are not alone here",
   "herobrine.chat.5": "why did you stop looking?",
-  "herobrine.chat.6": "stay with me..."
+  "herobrine.chat.6": "stay with me...",
+  "herobrine.welcome": "[Herobrine] Mod loaded. Test it with /herobrine scare @s (needs cheats). You can disable this message in the config."
 }

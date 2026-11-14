@@ -13,6 +13,7 @@ public class HerobrineConfig {
     public static final ForgeConfigSpec.IntValue OMEN_SECONDS;
     public static final ForgeConfigSpec.IntValue COOLDOWN_SECONDS;
     public static final ForgeConfigSpec.BooleanValue FAKE_CHAT;
+    public static final ForgeConfigSpec.BooleanValue WELCOME_MESSAGE;
     public static final ForgeConfigSpec.BooleanValue WORLD_TAMPERING;
     public static final ForgeConfigSpec.BooleanValue JUMPSCARES;
     public static final ForgeConfigSpec.DoubleValue JUMPSCARE_CHANCE;
@@ -31,12 +32,14 @@ public class HerobrineConfig {
         ENABLE_HAUNTINGS = c.comment("Liga/desliga os eventos de terror automáticos.").define("enabled", true);
         ONLY_WHEN_DARK = c.comment("Só acontece em locais escuros (noite ao ar livre, cavernas).").define("onlyWhenDark", true);
         AVG_SECONDS = c.comment("Tempo médio (segundos) entre eventos, enquanto as condições valem.")
-                .defineInRange("averageSecondsBetweenHauntings", 420, 30, 100000);
+                .defineInRange("averageSecondsBetweenHauntings", 120, 20, 100000);
         OMEN_SECONDS = c.comment("Duração mínima (segundos) dos presságios antes dele aparecer.")
                 .defineInRange("omenSeconds", 25, 5, 300);
         COOLDOWN_SECONDS = c.comment("Descanso (segundos) depois de cada aparição.")
-                .defineInRange("cooldownSeconds", 240, 0, 100000);
+                .defineInRange("cooldownSeconds", 90, 0, 100000);
         FAKE_CHAT = c.comment("Mensagens falsas no chat (entrou no jogo / saiu do jogo / falas).").define("fakeChat", true);
+        WELCOME_MESSAGE = c.comment("Mostra uma mensagem ao entrar no mundo confirmando que o mod carregou (desligue depois de testar).")
+                .define("welcomeMessage", true);
         WORLD_TAMPERING = c.comment("Presságios podem abrir portas de madeira e apagar tochas perto do jogador.")
                 .define("worldTampering", true);
         JUMPSCARES = c.comment("Quando encarado, o Espreitador pode aparecer colado na sua cara.").define("jumpscares", true);

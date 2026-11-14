@@ -1,18 +1,15 @@
 # Herobrine - Forge 1.20.1 (47.2.0)
 
-## Mobs
-- **Herobrine (Espreitador)** - fica parado te encarando; só anda quando você não olha. Encarar demais: some, ou aparece colado na sua cara (jumpscare).
-- **Herobrine Corrompido** - 3,2 blocos, 4 braços, mandíbula articulada, olhos brilhantes. Caça, teleporta para suas costas, escurece a visão, enfurece abaixo de 50% de vida.
+## Teste rápido (precisa de cheats / OP)
+1. `/herobrine scare @s`            - demo de sons, chat falso, neblina, tremor e flash
+2. `/herobrine appear @s stalker`   - aparição imediata do Espreitador
+3. `/herobrine appear @s corrupted` - aparição do Corrompido (teste em SOBREVIVÊNCIA: mobs hostis ignoram jogadores no criativo)
+Também: `/herobrine haunt <jogador> [stalker|corrupted]` e `/herobrine dread <jogador> <0-30>`.
 
-## Terror psicológico (sistema de eventos)
-IDLE -> PRESSÁGIOS (20-40 s) -> APARIÇÃO -> DESCANSO. Presságios: "Herobrine joined the game", passos atrás de você (com o som do bloco em que pisa), portas abrindo sozinhas, tochas apagando, sons de caverna/creeper/warden/enderman só para você, neblina fechada, batimento cardíaco crescente, tremor de câmera, fala falsa no chat. Cada aparição aumenta o *nível de pavor* do jogador (salvo), aumentando a chance do Corrompido.
+## Automático
+Em locais escuros (noite ao ar livre ou cavernas) no Overworld, em média a cada ~2 min (config). Cada aparição aumenta o nível de pavor, elevando a chance do Corrompido.
+Se você atualizou de uma versão antiga, APAGUE `config/herobrine-common.toml` para pegar os novos padrões.
 
-## Comandos (OP nível 2)
-- `/herobrine haunt <jogador> [stalker|corrupted]`
-- `/herobrine appear <jogador> [stalker|corrupted]`  (imediato)
-- `/herobrine dread <jogador> <0-30>`
-Ovos de geração: aba Spawn Eggs do criativo.
-
-## Config
-`herobrine-common.toml` (frequência, cooldown, chat falso, mexer no mundo, jumpscares, Corrompido) e
-`herobrine-client.toml` (acessibilidade: tremor, flashes, neblina).
+## Texturas / modelo
+`python3 tools/gen_assets.py` regenera as texturas e o `CorruptedHerobrineModel.java`.
+Para usar outra skin no Espreitador, substitua `textures/entity/herobrine.png` (64x64) e mantenha `herobrine_eyes.png`.
