@@ -1,8 +1,8 @@
 package com.hollowvigil;
 
-import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
@@ -28,17 +28,28 @@ public class ClientSetup {
         e.registerAboveAll("horror", ClientHorror::renderOverlay);
     }
 
-    /** Anima o brilho vermelho de "possuído" nos animais comuns. */
+    /** Adiciona o brilho vermelho de "possuído" aos animais comuns. */
     @SubscribeEvent
-    @SuppressWarnings({"unchecked", "rawtypes"})
     public static void onAddLayers(EntityRenderersEvent.AddLayers e) {
-        EntityType<?>[] types = {EntityType.COW, EntityType.PIG, EntityType.SHEEP, EntityType.CHICKEN, EntityType.WOLF,
-                EntityType.CAT, EntityType.RABBIT, EntityType.HORSE, EntityType.FOX, EntityType.GOAT};
-        for (EntityType<?> type : types) {
-            EntityRenderer<?> r = e.getRenderer(type);
-            if (r instanceof LivingEntityRenderer lr) {
-                lr.addLayer(new PossessedLayer(lr));
-            }
-        }
+        addPossessed(e, EntityType.COW);
+        addPossessed(e, EntityType.PIG);
+        addPossessed(e, EntityType.SHEEP);
+        addPossessed(e, EntityType.CHICKEN);
+        addPossessed(e, EntityType.WOLF);
+        addPossessed(e, EntityType.CAT);
+        addPossessed(e, EntityType.RABBIT);
+        addPossessed(e, EntityType.HORSE);
+        addPossessed(e, EntityType.FOX);
+        addPossessed(e, EntityType.GOAT);
+    }
+
+    private static <T extends LivingEntity> void addPossessed(EntityRenderersEvent.AddLayers e, EntityType<T> type) {
+        LivingEntityRenderer<T, ?> renderer = e.getRenderer(type);
+        if (renderer != null) addLayerRaw(renderer);
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static void addLayerRaw(LivingEntityRenderer renderer) {
+        renderer.addLayer(new PossessedLayer(renderer));
     }
 }
