@@ -8,14 +8,18 @@ import net.minecraft.world.entity.animal.IronGolem;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.npc.AbstractVillager;
 import net.minecraft.world.entity.npc.WanderingTrader;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.raid.Raider;
+import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.event.entity.living.AnimalTameEvent;
 import net.minecraftforge.event.entity.living.BabyEntitySpawnEvent;
+import net.minecraftforge.event.entity.living.LivingChangeTargetEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
-/** Pecados reduzem a honra; boas ações aumentam. */
+/** Pecados reduzem a honra; boas ações aumentam (alimentar animais, reproduzir, domar, defender). */
 public class HonorEvents {
 
     @SubscribeEvent
@@ -24,12 +28,10 @@ public class HonorEvents {
         if (victim.level().isClientSide) return;
         if (!(e.getSource().getEntity() instanceof ServerPlayer sp)) return;
 
-        if (victim instanceof HollowEntity || victim instanceof HollowReaperEntity) {
-            PlayerStats.addSanity(sp, 25.0F);
-            return;
-        }
-        if (victim instanceof HallucinationEntity) {
-            PlayerStats.addSanity(sp, 4.0F);
+        // caça do assassino
+        int points = victim instanceof HollowReaperEntity ? 4 : victim instanceof HollowEntity ? 2 : victim instanceof HallucinationEntity ? 1 : 0;
+        if (points > 0) {
+            if (PlayerStats.isKiller(sp)) Modes.onEntityKilled(sp, points);
             return;
         }
         if (victim.hasEffect(ModEffects.POSSESSED.get())) {   // libertar um animal possuído não é pecado
@@ -65,6 +67,22 @@ public class HonorEvents {
         }
     }
 
+    /** Alimentar um animal (com a comida certa) rende honra. */
+    @SubscribeEvent
+    public void onFeed(PlayerInteractEvent.EntityInteract e) {
+        if (e.getLevel().isClientSide) return;
+        if (!(e.getEntity() instanceof ServerPlayer sp)) return;
+        if (!(e.getTarget() instanceof Animal a)) return;
+        ItemStack stack = e.getItemStack();
+        if (stack.isEmpty() || !a.isFood(stack)) return;
+        if (a.hasEffect(ModEffects.POSSESSED.get())) return;
+        if (!a.isBaby() && !a.canFallInLove()) return;
+        long now = a.level().getGameTime();
+        if (now - a.getPersistentData().getLong("hv_fed") < 600L) return;
+        a.getPersistentData().putLong("hv_fed", now);
+        PlayerStats.addHonor(sp, HollowConfig.FEED_HONOR.get().floatValue());
+    }
+
     @SubscribeEvent
     public void onBreed(BabyEntitySpawnEvent e) {
         if (e.getCausedByPlayer() instanceof ServerPlayer sp) PlayerStats.addHonor(sp, 2.0F);
@@ -73,5 +91,13 @@ public class HonorEvents {
     @SubscribeEvent
     public void onTame(AnimalTameEvent e) {
         if (e.getTamer() instanceof ServerPlayer sp) PlayerStats.addHonor(sp, 5.0F);
+    }
+
+    /** Monstros nunca escolhem o anjo (honra 100) como alvo. */
+    @SubscribeEvent
+    public void onTarget(LivingChangeTargetEvent e) {
+        if (e.getNewTarget() instanceof Player p && e.getEntity() instanceof Enemy && PlayerStats.isAngel(p)) {
+            e.setCanceled(true);
+        }
     }
 }

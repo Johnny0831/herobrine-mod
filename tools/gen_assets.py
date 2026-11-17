@@ -349,14 +349,5 @@ for (x, y) in ((8, 4), (7, 5), (8, 6), (7, 7), (8, 8), (8, 9)): hp[x, y] = (240,
 for (x, y) in ((9, 5), (6, 6), (9, 7), (7, 8)): hp[x, y] = (150, 40, 60, 255)
 hi.save(ITEMS + "hollow_heart.png")
 
-from PIL import ImageDraw
-dg = Image.new("RGBA", (16, 16), (0, 0, 0, 0)); dd = ImageDraw.Draw(dg)
-dd.line([(5, 10), (14, 1)], fill=(222, 224, 236, 255), width=2)     # lâmina
-dd.line([(6, 11), (14, 3)], fill=(150, 152, 172, 255), width=1)     # sulco
-dd.point([(15, 0), (14, 1)], fill=(255, 255, 255, 255))             # brilho da ponta
-dd.line([(2, 8), (8, 14)], fill=(88, 88, 104, 255), width=2)        # guarda
-dd.line([(4, 11), (1, 14)], fill=(34, 28, 38, 255), width=2)        # cabo
-dd.point([(3, 12), (2, 13)], fill=(120, 20, 30, 255))               # amarração
-dd.point([(0, 15)], fill=(250, 250, 255, 255))                      # pomo
-dg.save(ITEMS + "hollow_dagger.png")
+
 print("itens ok")

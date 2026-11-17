@@ -7,7 +7,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public class HorrorNet {
-    private static final String PROTOCOL = "1";
+    private static final String PROTOCOL = "2";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(HollowVigilMod.MODID, "main"), () -> PROTOCOL, PROTOCOL::equals, PROTOCOL::equals);
 
@@ -18,23 +18,31 @@ public class HorrorNet {
                 StatsSyncPacket::encode, StatsSyncPacket::decode, StatsSyncPacket::handle);
     }
 
-    public static void sendTo(ServerPlayer player, HorrorEffectPacket packet) {
-        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), packet);
+    public static void sendStats(ServerPlayer p) {
+        CHANNEL.send(PacketDistributor.PLAYER.with(() -> p), new StatsSyncPacket(
+                Math.round(PlayerStats.getSanity(p)), Math.round(PlayerStats.getHonor(p)),
+                PlayerStats.mode(p), PlayerStats.getKills(p), HollowConfig.KILLER_TARGET.get()));
     }
 
-    public static void sendStats(ServerPlayer player, int sanity, int honor) {
-        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new StatsSyncPacket(sanity, honor));
+    /** Assassinos "não temem nada" e anjos estão protegidos: efeitos de susto não são enviados. */
+    private static boolean fearless(ServerPlayer p) {
+        return PlayerStats.isKiller(p) || PlayerStats.isAngel(p);
+    }
+
+    private static void send(ServerPlayer p, HorrorEffectPacket packet) {
+        if (fearless(p)) return;
+        CHANNEL.send(PacketDistributor.PLAYER.with(() -> p), packet);
     }
 
     public static void shake(ServerPlayer p, int ticks, float intensity) {
-        sendTo(p, new HorrorEffectPacket(HorrorEffectPacket.Type.SHAKE, ticks, intensity));
+        send(p, new HorrorEffectPacket(HorrorEffectPacket.Type.SHAKE, ticks, intensity));
     }
 
     public static void flash(ServerPlayer p, int ticks) {
-        sendTo(p, new HorrorEffectPacket(HorrorEffectPacket.Type.FLASH, ticks, 1.0F));
+        send(p, new HorrorEffectPacket(HorrorEffectPacket.Type.FLASH, ticks, 1.0F));
     }
 
     public static void fog(ServerPlayer p, int ticks) {
-        sendTo(p, new HorrorEffectPacket(HorrorEffectPacket.Type.FOG, ticks, 1.0F));
+        send(p, new HorrorEffectPacket(HorrorEffectPacket.Type.FOG, ticks, 1.0F));
     }
 }

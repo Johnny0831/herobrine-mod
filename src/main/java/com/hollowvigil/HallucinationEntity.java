@@ -3,6 +3,8 @@ package com.hollowvigil;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -19,8 +21,9 @@ import net.minecraft.world.level.Level;
 import java.util.UUID;
 
 /**
- * Alucinação. Modo silhueta (sanidade baixa): figura parada à distância que some quando olhada.
- * Modo hostil (sanidade ZERO): REAL - persegue e fere a vítima. Some quando a sanidade volta a 25.
+ * Alucinação. Silhueta (sanidade baixa): figura parada ao longe que some quando olhada.
+ * Hostil (sanidade ZERO, ou caça do assassino): REAL - persegue e fere a vítima.
+ * Só um ASSASSINO consegue feri-la. Some quando a sanidade da vítima volta a 25.
  */
 public class HallucinationEntity extends Monster {
     private UUID victim;
@@ -48,9 +51,7 @@ public class HallucinationEntity extends Monster {
         this.lifetime = lifetimeTicks;
     }
 
-    public boolean isHostile() {
-        return hostile;
-    }
+    public boolean isHostile() { return hostile; }
 
     @Override
     protected void registerGoals() {
@@ -66,22 +67,21 @@ public class HallucinationEntity extends Monster {
         if (this.level().isClientSide) return;
 
         Player p = victim == null ? null : this.level().getPlayerByUUID(victim);
-        if (p == null || --lifetime <= 0) {
+        if (p == null || --lifetime <= 0 || PlayerStats.isAngel(p)) {
             fade();
             return;
         }
 
         if (hostile) {
             this.setTarget(p);
-            if (PlayerStats.getSanity(p) >= 25.0F) fade();
+            if (PlayerStats.getSanity(p) >= 25.0F && !PlayerStats.isKiller(p)) fade();
         } else {
             this.getNavigation().stop();
             if (LookUtil.isLookingAt(p, this)) {
                 if (++stareTicks >= 25) fade();
             } else if (this.distanceTo(p) < 7.0D) {
                 if (p instanceof ServerPlayer sp) {
-                    PlayerStats.addSanity(sp, -3.0F);
-                    Sfx.behind(sp, "entity.enderman.stare", 0.8F, 0.5F, 3.0D);
+                    Sfx.behind(sp, ModSounds.WHISPER.get(), 1.0F, 0.7F, 2.0D);
                     HorrorNet.shake(sp, 10, 1.0F);
                 }
                 fade();
@@ -92,20 +92,16 @@ public class HallucinationEntity extends Monster {
     @Override
     public boolean doHurtTarget(Entity target) {
         boolean hit = super.doHurtTarget(target);
-        if (hit && target instanceof ServerPlayer sp) {
-            PlayerStats.addSanity(sp, -3.0F);
-            HorrorNet.shake(sp, 10, 2.0F);
-        }
+        if (hit && target instanceof ServerPlayer sp) HorrorNet.shake(sp, 10, 2.0F);
         return hit;
     }
 
     @Override
     public boolean hurt(DamageSource source, float amount) {
-        if (!hostile && !source.is(net.minecraft.tags.DamageTypeTags.BYPASSES_INVULNERABILITY)) {
-            fade();
-            return false;
-        }
-        return super.hurt(source, amount);
+        if (source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) return super.hurt(source, amount);
+        if (source.getEntity() instanceof Player p && PlayerStats.isKiller(p)) return super.hurt(source, amount);
+        if (!hostile) fade();
+        return false;
     }
 
     public void fade() {
@@ -113,6 +109,16 @@ public class HallucinationEntity extends Monster {
             s.sendParticles(ParticleTypes.SOUL, getX(), getY() + 1.0D, getZ(), 18, 0.3D, 0.8D, 0.3D, 0.02D);
         }
         this.discard();
+    }
+
+    @Override
+    protected SoundEvent getAmbientSound() {
+        return hostile ? ModSounds.BREATH.get() : null;
+    }
+
+    @Override
+    public int getAmbientSoundInterval() {
+        return 160;
     }
 
     @Override

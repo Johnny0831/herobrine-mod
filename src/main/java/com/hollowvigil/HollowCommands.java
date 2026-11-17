@@ -1,6 +1,7 @@
 package com.hollowvigil;
 
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.commands.CommandSourceStack;
@@ -17,7 +18,9 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
  * /hollow haunt   <jogador> [stalker|reaper|gift]    presságios e depois a aparição
  * /hollow appear  <jogador> [stalker|reaper|gift]    aparição imediata
  * /hollow possess <jogador>                          animais próximos atacam
- * /hollow sanity  <jogador> <0-100>   /hollow honor <jogador> <0-100>   /hollow dread <jogador> <0-30>
+ * /hollow status  <jogador>                          mostra sanidade, honra e modo
+ * /hollow sanity|honor <jogador> <0-100>   /hollow dread <jogador> <0-30>
+ * (honor 0 = ASSASSINO, honor 100 = ANJO)
  */
 public class HollowCommands {
     @SubscribeEvent
@@ -40,12 +43,14 @@ public class HollowCommands {
                                 .then(Commands.literal("gift").executes(c -> haunt(c, HorrorDirector.Kind.GIFT, true)))))
                 .then(Commands.literal("possess")
                         .then(Commands.argument("target", EntityArgument.player()).executes(this::possess)))
+                .then(Commands.literal("status")
+                        .then(Commands.argument("target", EntityArgument.player()).executes(this::status)))
                 .then(stat("sanity", 100))
                 .then(stat("honor", 100))
                 .then(stat("dread", 30)));
     }
 
-    private com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> stat(String name, int max) {
+    private LiteralArgumentBuilder<CommandSourceStack> stat(String name, int max) {
         return Commands.literal(name)
                 .then(Commands.argument("target", EntityArgument.player())
                         .then(Commands.argument("value", IntegerArgumentType.integer(0, max))
@@ -57,11 +62,20 @@ public class HollowCommands {
         int v = IntegerArgumentType.getInteger(c, "value");
         switch (name) {
             case "sanity" -> PlayerStats.setSanity(p, v);
-            case "honor" -> PlayerStats.setHonorRaw(p, v);
+            case "honor" -> PlayerStats.forceHonor(p, v);
             default -> PlayerStats.setDread(p, v);
         }
         PlayerStats.sync(p);
         c.getSource().sendSuccess(() -> Component.literal(name + " de " + p.getName().getString() + " = " + v), true);
+        return 1;
+    }
+
+    private int status(CommandContext<CommandSourceStack> c) throws CommandSyntaxException {
+        ServerPlayer p = EntityArgument.getPlayer(c, "target");
+        String mode = PlayerStats.isKiller(p) ? "ASSASSINO" : PlayerStats.isAngel(p) ? "ANJO" : "normal";
+        c.getSource().sendSuccess(() -> Component.literal(String.format("%s: sanidade %.1f | honra %.1f | modo %s | caçada %d/%d",
+                p.getName().getString(), PlayerStats.getSanity(p), PlayerStats.getHonor(p), mode,
+                PlayerStats.getKills(p), HollowConfig.KILLER_TARGET.get())), false);
         return 1;
     }
 
@@ -82,8 +96,9 @@ public class HollowCommands {
     private int haunt(CommandContext<CommandSourceStack> c, HorrorDirector.Kind kind, boolean immediate)
             throws CommandSyntaxException {
         ServerPlayer p = EntityArgument.getPlayer(c, "target");
-        HorrorDirector.INSTANCE.startHaunt(p, kind, immediate);
-        c.getSource().sendSuccess(() -> Component.literal("O Oco -> " + p.getName().getString()), true);
-        return 1;
+        boolean ok = HorrorDirector.INSTANCE.startHaunt(p, kind, immediate);
+        c.getSource().sendSuccess(() -> Component.literal(ok ? "O Oco -> " + p.getName().getString()
+                : p.getName().getString() + " e um ANJO: as entidades nunca aparecem para ele"), true);
+        return ok ? 1 : 0;
     }
 }

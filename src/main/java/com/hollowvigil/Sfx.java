@@ -24,6 +24,10 @@ public final class Sfx {
         play(p, BuiltInRegistries.SOUND_EVENT.get(rl), vol, pitch, x, y, z);
     }
 
+    public static void atPlayer(ServerPlayer p, SoundEvent ev, float vol, float pitch) {
+        play(p, ev, vol, pitch, p.getX(), p.getY(), p.getZ());
+    }
+
     public static void atPlayer(ServerPlayer p, String id, float vol, float pitch) {
         play(p, id, vol, pitch, p.getX(), p.getY(), p.getZ());
     }
@@ -37,11 +41,17 @@ public final class Sfx {
 
     public static void behind(ServerPlayer p, String id, float vol, float pitch, double dist) {
         Vec3 v = behindPos(p, dist);
-        play(p, id, vol, pitch, v.x, v.y, v.z);
+        play(p, id, vol, pitch, v.x, v.y + 1.0D, v.z);
     }
 
     public static void behind(ServerPlayer p, SoundEvent ev, float vol, float pitch, double dist) {
         Vec3 v = behindPos(p, dist);
-        play(p, ev, vol, pitch, v.x, v.y, v.z);
+        play(p, ev, vol, pitch, v.x, v.y + 1.0D, v.z);
+    }
+
+    /** Som vindo de uma direção aleatória ao redor do jogador. */
+    public static void around(ServerPlayer p, SoundEvent ev, float vol, float pitch, double dist) {
+        double a = p.getRandom().nextDouble() * Math.PI * 2.0D;
+        play(p, ev, vol, pitch, p.getX() + Math.cos(a) * dist, p.getY() + 1.0D, p.getZ() + Math.sin(a) * dist);
     }
 }

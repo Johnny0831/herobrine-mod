@@ -35,8 +35,11 @@ public class ModItems {
                             .effect(() -> new MobEffectInstance(MobEffects.ABSORPTION, 2400, 1), 1.0F)
                             .build())));
 
-    public static final RegistryObject<Item> HOLLOW_DAGGER = ITEMS.register("hollow_dagger",
-            () -> new HollowDaggerItem(new Item.Properties().rarity(Rarity.EPIC).fireResistant()));
+    public static final RegistryObject<Item> HOLLOW_LANTERN = ITEMS.register("hollow_lantern",
+            () -> new HollowLanternItem(new Item.Properties().stacksTo(1).rarity(Rarity.RARE).fireResistant()));
+
+    public static final RegistryObject<Item> KILLER_KNIFE = ITEMS.register("killer_knife",
+            () -> new KillerKnifeItem(new Item.Properties().rarity(Rarity.EPIC).fireResistant()));
 
     public static final RegistryObject<CreativeModeTab> TAB = TABS.register("main",
             () -> CreativeModeTab.builder()
@@ -45,7 +48,8 @@ public class ModItems {
                     .displayItems((params, out) -> {
                         out.accept(SANITY_CHARM.get());
                         out.accept(HOLLOW_HEART.get());
-                        out.accept(HOLLOW_DAGGER.get());
+                        out.accept(HOLLOW_LANTERN.get());
+                        out.accept(KILLER_KNIFE.get());
                         out.accept(HOLLOW_EGG.get());
                         out.accept(REAPER_EGG.get());
                         out.accept(HALLUCINATION_EGG.get());

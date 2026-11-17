@@ -4,11 +4,11 @@ import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -22,9 +22,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * O Oco: fica parado te encarando e só anda quando você não olha. Encará-lo tira sanidade.
- * Se for encarado por tempo demais, some - ou aparece colado na sua cara.
- * Modo benevolente (jogadores honrados): entrega um presente e vai embora.
+ * O Oco: fica parado te encarando e só anda quando você não olha. Olhar para ele corrói a sanidade
+ * (o diretor faz a conta). Encarado por tempo demais, some - ou surge colado na sua cara.
+ * Benevolente (jogador honrado): entrega um presente e vai embora. Só um ASSASSINO consegue feri-lo.
  */
 public class HollowEntity extends Monster {
     private static final int STARE_TICKS_TO_VANISH = 50;
@@ -46,9 +46,9 @@ public class HollowEntity extends Monster {
                 .add(Attributes.FOLLOW_RANGE, 64.0D);
     }
 
-    public void setBenevolent(boolean value) {
-        this.benevolent = value;
-    }
+    public void setBenevolent(boolean value) { this.benevolent = value; }
+
+    public boolean isBenevolent() { return benevolent; }
 
     @Override
     protected void registerGoals() {
@@ -73,6 +73,10 @@ public class HollowEntity extends Monster {
 
         Player player = this.level().getNearestPlayer(this, 64.0D);
         if (player == null || player.isSpectator()) return;
+        if (PlayerStats.isAngel(player)) {   // anjos nunca são vistos
+            vanish();
+            return;
+        }
 
         if (benevolent) {
             this.getNavigation().stop();
@@ -83,9 +87,13 @@ public class HollowEntity extends Monster {
             return;
         }
 
+        if (PlayerStats.isKiller(player)) {   // o caçador não é intimidado: ele se aproxima para ser caçado
+            if (this.distanceTo(player) > 6.0D && this.tickCount % 30 == 0) this.getNavigation().moveTo(player, 0.8D);
+            return;
+        }
+
         if (LookUtil.isLookingAt(player, this)) {
             this.getNavigation().stop();
-            PlayerStats.addSanity(player, -0.06F);
             if (++stareTicks >= STARE_TICKS_TO_VANISH) onStaredAt(player);
         } else {
             if (stareTicks > 0) stareTicks--;
@@ -127,12 +135,11 @@ public class HollowEntity extends Monster {
         this.scareTicks = 14;
         this.stareTicks = 0;
 
-        PlayerStats.addSanity(sp, -8.0F);
-        Sfx.play(sp, "entity.enderman.scream", 1.7F, 0.5F, getX(), getY() + 1.6D, getZ());
-        Sfx.play(sp, "entity.ghast.scream", 1.2F, 0.4F, getX(), getY() + 1.6D, getZ());
+        Sfx.play(sp, ModSounds.JUMPSCARE.get(), 1.8F, 1.0F, getX(), getY() + 1.6D, getZ());
+        Sfx.play(sp, ModSounds.STINGER.get(), 1.4F, 0.9F, getX(), getY() + 1.0D, getZ());
         HorrorNet.flash(sp, 12);
         HorrorNet.shake(sp, 25, 4.0F);
-        sp.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 80, 0, false, false));
+        PlayerStats.fear(sp, MobEffects.DARKNESS, 80);
     }
 
     public void vanish() {
@@ -152,11 +159,30 @@ public class HollowEntity extends Monster {
 
     @Override
     public boolean hurt(DamageSource source, float amount) {
-        if (source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
-            return super.hurt(source, amount);
-        }
+        if (source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) return super.hurt(source, amount);
+        if (source.getEntity() instanceof Player p && PlayerStats.isKiller(p)) return super.hurt(source, amount);
         if (benevolent) gentleVanish(); else vanish();
         return false;
+    }
+
+    @Override
+    protected SoundEvent getAmbientSound() {
+        return benevolent ? null : ModSounds.HOLLOW_IDLE.get();
+    }
+
+    @Override
+    public int getAmbientSoundInterval() {
+        return 240;
+    }
+
+    @Override
+    protected SoundEvent getHurtSound(DamageSource src) {
+        return ModSounds.STATIC_BURST.get();
+    }
+
+    @Override
+    protected SoundEvent getDeathSound() {
+        return ModSounds.SCREAM_FAR.get();
     }
 
     @Override

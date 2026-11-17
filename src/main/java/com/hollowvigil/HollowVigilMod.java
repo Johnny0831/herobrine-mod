@@ -21,6 +21,7 @@ public class HollowVigilMod {
         ModItems.ITEMS.register(bus);
         ModItems.TABS.register(bus);
         ModEffects.EFFECTS.register(bus);
+        ModSounds.SOUNDS.register(bus);
         bus.addListener(this::onAttributes);
 
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, HollowConfig.COMMON_SPEC);

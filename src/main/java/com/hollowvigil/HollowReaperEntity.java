@@ -5,9 +5,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundEvents;
+import net.minecraft.tags.DamageTypeTags;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -30,8 +30,9 @@ import net.minecraft.world.phys.Vec3;
 import java.util.List;
 
 /**
- * Ceifador Oco: a forma agressiva. Teleporta para as suas costas, escurece a visão e drena a sanidade.
- * Contra pecadores (honra baixa) mata com UM golpe.
+ * Ceifador Oco: a forma agressiva. Teleporta para as suas costas e escurece a visão.
+ * Contra pecadores (honra <= 25) mata com UM golpe (exceto assassinos).
+ * Só um ASSASSINO consegue feri-lo; os demais apenas o veem se teleportar atrás deles.
  */
 public class HollowReaperEntity extends Monster {
     private int blinkCooldown = 100;
@@ -75,33 +76,35 @@ public class HollowReaperEntity extends Monster {
             return;
         }
 
+        LivingEntity target = this.getTarget();
+        if (target instanceof Player tp && PlayerStats.isAngel(tp)) {   // anjos nunca são caçados
+            vanish();
+            return;
+        }
+
         if (!enraged && this.getHealth() < this.getMaxHealth() * 0.5F) {
             enraged = true;
             this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.44D);
             for (ServerPlayer sp : nearbyPlayers(32.0D)) {
-                Sfx.play(sp, "entity.ender_dragon.growl", 1.6F, 0.4F, getX(), getY() + 2.0D, getZ());
+                Sfx.play(sp, ModSounds.REAPER_ROAR.get(), 1.6F, 0.8F, getX(), getY() + 2.0D, getZ());
                 HorrorNet.shake(sp, 30, 2.5F);
             }
         }
 
-        LivingEntity target = this.getTarget();
         if (target instanceof ServerPlayer sp) {
             double dist = this.distanceTo(sp);
-            PlayerStats.addSanity(sp, dist < 20.0D ? -0.05F : -0.02F);
             if (this.tickCount % 20 == 0) {
                 float vol = (float) Math.max(0.3D, 1.4D - dist / 30.0D);
-                Sfx.atPlayer(sp, "entity.warden.heartbeat", vol, 1.0F + (float) Math.max(0, (20 - dist) / 40.0D));
-                if (dist < 24.0D && sp.hasLineOfSight(this)) {
-                    sp.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 60, 0, false, false));
-                }
+                boolean close = dist < 14.0D;
+                Sfx.atPlayer(sp, close ? ModSounds.HEARTBEAT_FAST.get() : ModSounds.HEARTBEAT.get(), vol, 1.0F);
+                if (dist < 24.0D && sp.hasLineOfSight(this)) PlayerStats.fear(sp, MobEffects.DARKNESS, 60);
             }
-            if (this.random.nextInt(220) == 0) {
-                Sfx.behind(sp, "ambient.soul_sand_valley.mood", 1.0F, 0.6F, 6.0D);
-            }
+            if (this.random.nextInt(200) == 0) Sfx.behind(sp, ModSounds.WHISPER.get(), 1.0F, 0.8F, 3.0D);
             if (--blinkCooldown <= 0 && dist > 7.0D) {
                 blinkCooldown = (enraged ? 45 : 85) + this.random.nextInt(70);
                 if (blinkBehind(sp)) {
-                    Sfx.play(sp, "entity.enderman.teleport", 1.0F, 0.4F, getX(), getY() + 1.5D, getZ());
+                    Sfx.play(sp, "minecraft:entity.enderman.teleport", 1.0F, 0.4F, getX(), getY() + 1.5D, getZ());
+                    Sfx.play(sp, ModSounds.STINGER.get(), 0.9F, 1.1F, getX(), getY() + 1.5D, getZ());
                     HorrorNet.shake(sp, 12, 1.5F);
                 }
             }
@@ -138,36 +141,42 @@ public class HollowReaperEntity extends Monster {
 
     @Override
     public boolean doHurtTarget(Entity target) {
-        if (target instanceof Player pl && PlayerStats.isSinner(pl) && HollowConfig.SINNER_ONE_HIT.get()) {
+        if (target instanceof Player pl && PlayerStats.isSinner(pl) && !PlayerStats.isKiller(pl)
+                && HollowConfig.SINNER_ONE_HIT.get()) {
             if (pl instanceof ServerPlayer sp) {
-                sp.sendSystemMessage(Component.literal("<").append(Component.translatable("entity.hollowvigil.hollow"))
-                        .append(Component.literal("> ")).append(Component.translatable("hollow.chat.sin.verdict")));
+                ChatLines.hollowSays(sp, "verdict");
+                Sfx.atPlayer(sp, ModSounds.TOLL.get(), 1.4F, 0.6F);
                 HorrorNet.flash(sp, 8);
             }
-            this.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+            this.swing(InteractionHand.MAIN_HAND);
             return target.hurt(this.level().damageSources().mobAttack(this), 1000.0F);
         }
         boolean hit = super.doHurtTarget(target);
-        if (hit && target instanceof LivingEntity living) {
-            living.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 100, 0, false, false));
-            living.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 120, 0, false, false));
-            living.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 0, false, false));
-            if (living instanceof ServerPlayer sp) {
-                PlayerStats.addSanity(sp, -6.0F);
-                Sfx.play(sp, "entity.ghast.scream", 1.0F, 0.5F, getX(), getY() + 2.0D, getZ());
-                HorrorNet.shake(sp, 15, 3.0F);
-                HorrorNet.flash(sp, 6);
-            }
+        if (hit && target instanceof ServerPlayer sp) {
+            PlayerStats.fear(sp, MobEffects.DARKNESS, 100);
+            PlayerStats.fear(sp, MobEffects.CONFUSION, 120);
+            PlayerStats.fear(sp, MobEffects.MOVEMENT_SLOWDOWN, 40);
+            Sfx.play(sp, ModSounds.JUMPSCARE.get(), 0.9F, 0.8F, getX(), getY() + 2.0D, getZ());
+            HorrorNet.shake(sp, 15, 3.0F);
+            HorrorNet.flash(sp, 6);
         }
         return hit;
     }
 
     @Override
     public boolean hurt(DamageSource source, float amount) {
+        Entity attacker = source.getEntity();
+        boolean allowed = source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)
+                || (attacker instanceof Player p && PlayerStats.isKiller(p));
+        if (!allowed) {
+            if (!this.level().isClientSide && attacker instanceof LivingEntity le && this.random.nextFloat() < 0.35F) {
+                blinkBehind(le);
+            }
+            return false;
+        }
         boolean result = super.hurt(source, amount);
-        if (result && !this.level().isClientSide && source.getEntity() instanceof LivingEntity attacker
-                && this.random.nextFloat() < 0.25F) {
-            blinkBehind(attacker);
+        if (result && !this.level().isClientSide && attacker instanceof LivingEntity le && this.random.nextFloat() < 0.2F) {
+            blinkBehind(le);
         }
         return result;
     }
@@ -177,10 +186,9 @@ public class HollowReaperEntity extends Monster {
         super.die(source);
         if (!this.level().isClientSide) {
             for (ServerPlayer sp : nearbyPlayers(40.0D)) {
-                Sfx.play(sp, "entity.enderman.scream", 1.5F, 0.3F, getX(), getY() + 2.0D, getZ());
+                Sfx.play(sp, ModSounds.SCREAM_FAR.get(), 1.5F, 0.6F, getX(), getY() + 2.0D, getZ());
                 HorrorNet.shake(sp, 40, 3.0F);
                 HorrorNet.flash(sp, 10);
-                PlayerStats.addSanity(sp, 20.0F);
             }
         }
     }
@@ -191,13 +199,23 @@ public class HollowReaperEntity extends Monster {
     }
 
     @Override
+    protected SoundEvent getAmbientSound() {
+        return ModSounds.REAPER_ROAR.get();
+    }
+
+    @Override
+    public int getAmbientSoundInterval() {
+        return 220;
+    }
+
+    @Override
     protected SoundEvent getHurtSound(DamageSource src) {
-        return SoundEvents.ENDERMAN_HURT;
+        return ModSounds.STATIC_BURST.get();
     }
 
     @Override
     protected SoundEvent getDeathSound() {
-        return SoundEvents.ENDERMAN_DEATH;
+        return ModSounds.SCREAM_FAR.get();
     }
 
     @Override

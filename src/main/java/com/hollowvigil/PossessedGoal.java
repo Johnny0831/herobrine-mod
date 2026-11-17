@@ -82,7 +82,7 @@ public class PossessedGoal extends Goal {
         Player p = target();
         if (p == null) return;
         int mode = mob.getPersistentData().getInt("hv_mode");
-        boolean honored = PlayerStats.isHonored(p);
+        boolean honored = PlayerStats.isHonored(p) || PlayerStats.isKiller(p);
         mob.getLookControl().setLookAt(p, 30.0F, 30.0F);
         double d2 = mob.distanceToSqr(p);
 
@@ -93,10 +93,7 @@ public class PossessedGoal extends Goal {
                 attackCooldown = 20;
                 float dmg = PlayerStats.isSinner(p) ? 6.0F : 3.0F;
                 p.hurt(mob.level().damageSources().mobAttack(mob), dmg);
-                if (p instanceof ServerPlayer sp) {
-                    PlayerStats.addSanity(sp, -4.0F);
-                    HorrorNet.shake(sp, 10, 2.0F);
-                }
+                if (p instanceof ServerPlayer sp) HorrorNet.shake(sp, 10, 2.0F);
             }
         } else {
             if (LookUtil.isLookingAt(p, mob)) mob.getNavigation().stop();

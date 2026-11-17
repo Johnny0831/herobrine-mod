@@ -1,0 +1,164 @@
+{
+  "heartbeat": {
+    "subtitle": "subtitles.hollowvigil.heartbeat",
+    "sounds": [
+      {
+        "name": "hollowvigil:heartbeat"
+      }
+    ]
+  },
+  "heartbeat_fast": {
+    "subtitle": "subtitles.hollowvigil.heartbeat_fast",
+    "sounds": [
+      {
+        "name": "hollowvigil:heartbeat_fast"
+      }
+    ]
+  },
+  "breath": {
+    "subtitle": "subtitles.hollowvigil.breath",
+    "sounds": [
+      {
+        "name": "hollowvigil:breath"
+      }
+    ]
+  },
+  "whisper": {
+    "subtitle": "subtitles.hollowvigil.whisper",
+    "sounds": [
+      {
+        "name": "hollowvigil:whisper_1"
+      },
+      {
+        "name": "hollowvigil:whisper_2"
+      },
+      {
+        "name": "hollowvigil:whisper_3"
+      }
+    ]
+  },
+  "drone": {
+    "subtitle": "subtitles.hollowvigil.drone",
+    "sounds": [
+      {
+        "name": "hollowvigil:drone"
+      }
+    ]
+  },
+  "stinger": {
+    "subtitle": "subtitles.hollowvigil.stinger",
+    "sounds": [
+      {
+        "name": "hollowvigil:stinger_1"
+      },
+      {
+        "name": "hollowvigil:stinger_2"
+      }
+    ]
+  },
+  "scream_far": {
+    "subtitle": "subtitles.hollowvigil.scream_far",
+    "sounds": [
+      {
+        "name": "hollowvigil:scream_far"
+      }
+    ]
+  },
+  "scrape": {
+    "subtitle": "subtitles.hollowvigil.scrape",
+    "sounds": [
+      {
+        "name": "hollowvigil:scrape_1"
+      },
+      {
+        "name": "hollowvigil:scrape_2"
+      }
+    ]
+  },
+  "static_burst": {
+    "subtitle": "subtitles.hollowvigil.static_burst",
+    "sounds": [
+      {
+        "name": "hollowvigil:static_burst"
+      }
+    ]
+  },
+  "creak": {
+    "subtitle": "subtitles.hollowvigil.creak",
+    "sounds": [
+      {
+        "name": "hollowvigil:creak_1"
+      },
+      {
+        "name": "hollowvigil:creak_2"
+      }
+    ]
+  },
+  "knock": {
+    "subtitle": "subtitles.hollowvigil.knock",
+    "sounds": [
+      {
+        "name": "hollowvigil:knock_1"
+      },
+      {
+        "name": "hollowvigil:knock_2"
+      }
+    ]
+  },
+  "angel_choir": {
+    "subtitle": "subtitles.hollowvigil.angel_choir",
+    "sounds": [
+      {
+        "name": "hollowvigil:angel_choir"
+      }
+    ]
+  },
+  "chime": {
+    "subtitle": "subtitles.hollowvigil.chime",
+    "sounds": [
+      {
+        "name": "hollowvigil:chime"
+      }
+    ]
+  },
+  "rage": {
+    "subtitle": "subtitles.hollowvigil.rage",
+    "sounds": [
+      {
+        "name": "hollowvigil:rage"
+      }
+    ]
+  },
+  "hollow_idle": {
+    "subtitle": "subtitles.hollowvigil.hollow_idle",
+    "sounds": [
+      {
+        "name": "hollowvigil:hollow_idle"
+      }
+    ]
+  },
+  "reaper_roar": {
+    "subtitle": "subtitles.hollowvigil.reaper_roar",
+    "sounds": [
+      {
+        "name": "hollowvigil:reaper_roar"
+      }
+    ]
+  },
+  "jumpscare": {
+    "subtitle": "subtitles.hollowvigil.jumpscare",
+    "sounds": [
+      {
+        "name": "hollowvigil:jumpscare"
+      }
+    ]
+  },
+  "toll": {
+    "subtitle": "subtitles.hollowvigil.toll",
+    "sounds": [
+      {
+        "name": "hollowvigil:toll"
+      }
+    ]
+  }
+}
