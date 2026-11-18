@@ -71,7 +71,9 @@ public class HollowReaperEntity extends Monster {
         super.aiStep();
         if (this.level().isClientSide) return;
 
-        if (this.tickCount > HollowConfig.REAPER_LIFETIME_SECONDS.get() * 20) {
+        LivingEntity tNow = this.getTarget();
+        boolean hunted = tNow instanceof Player kp && PlayerStats.isKiller(kp);   // alvo é um assassino
+        if (this.tickCount > (hunted ? 12000 : HollowConfig.REAPER_LIFETIME_SECONDS.get() * 20)) {
             vanish();
             return;
         }
@@ -100,7 +102,7 @@ public class HollowReaperEntity extends Monster {
                 if (dist < 24.0D && sp.hasLineOfSight(this)) PlayerStats.fear(sp, MobEffects.DARKNESS, 60);
             }
             if (this.random.nextInt(200) == 0) Sfx.behind(sp, ModSounds.WHISPER.get(), 1.0F, 0.8F, 3.0D);
-            if (--blinkCooldown <= 0 && dist > 7.0D) {
+            if (--blinkCooldown <= 0 && dist > (hunted ? 14.0D : 7.0D)) {
                 blinkCooldown = (enraged ? 45 : 85) + this.random.nextInt(70);
                 if (blinkBehind(sp)) {
                     Sfx.play(sp, "minecraft:entity.enderman.teleport", 1.0F, 0.4F, getX(), getY() + 1.5D, getZ());
@@ -175,8 +177,9 @@ public class HollowReaperEntity extends Monster {
             return false;
         }
         boolean result = super.hurt(source, amount);
-        if (result && !this.level().isClientSide && attacker instanceof LivingEntity le && this.random.nextFloat() < 0.2F) {
-            blinkBehind(le);
+        boolean byKiller = attacker instanceof Player pk && PlayerStats.isKiller(pk);
+        if (result && !byKiller && !this.level().isClientSide && attacker instanceof LivingEntity le && this.random.nextFloat() < 0.2F) {
+            blinkBehind(le);   // contra o assassino ele NUNCA foge: o poder do modo é poder bater nele
         }
         return result;
     }
@@ -200,7 +203,8 @@ public class HollowReaperEntity extends Monster {
 
     @Override
     protected SoundEvent getAmbientSound() {
-        return ModSounds.REAPER_ROAR.get();
+        Player near = this.level().getNearestPlayer(this, 48.0D);
+        return (near != null && PlayerStats.isKiller(near)) ? null : ModSounds.REAPER_ROAR.get();
     }
 
     @Override

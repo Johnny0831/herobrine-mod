@@ -11,7 +11,7 @@ public class HollowConfig {
             STORM_ON_REAPER, LIGHTNING_ON_REAPER, WELCOME_MESSAGE, INTRO_EVENT, FORCED_LOOK, PLAYER_PARTICLES,
             ANGEL_FLIGHT;
     public static final ForgeConfigSpec.IntValue AVG_SECONDS, OMEN_SECONDS, COOLDOWN_SECONDS, REAPER_LIFETIME_SECONDS,
-            KILLER_TARGET;
+            KILLER_TARGET, KILLER_IDLE_SECONDS;
     public static final ForgeConfigSpec.DoubleValue JUMPSCARE_CHANCE, REAPER_MAX_CHANCE, SINNER_REAPER_CHANCE,
             SANITY_DRAIN_MULT, FEED_HONOR;
 
@@ -59,6 +59,8 @@ public class HollowConfig {
 
         c.push("killer");
         KILLER_TARGET = c.comment("Pontos de caça para absolver o assassino (Ceifador=4, O Oco=2, Alucinação=1).").defineInRange("missionTarget", 15, 1, 500);
+        KILLER_IDLE_SECONDS = c.comment("Segundos sem matar até a fúria acabar (a honra sobe e o modo termina com lentidão e exaustão).")
+                .defineInRange("idleSecondsBeforeFuryEnds", 180, 30, 3600);
         c.pop();
 
         c.push("angel");

@@ -17,6 +17,9 @@ import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -103,7 +106,7 @@ public class HorrorDirector {
         Haunt h = haunts.computeIfAbsent(sp.getUUID(), k -> new Haunt());
         Modes.tick(sp);
         tickSanity(sp, h);
-        if (PlayerStats.isAngel(sp)) {   // anjos: as entidades nunca aparecem
+        if (PlayerStats.isAngel(sp) || PlayerStats.isKiller(sp)) {   // anjos: nunca aparecem; assassino: pressão própria
             h.phase = Phase.IDLE;
             return;
         }
@@ -228,7 +231,7 @@ public class HorrorDirector {
         if (PlayerStats.isKiller(sp) || PlayerStats.isAngel(sp)) {   // sem medo
             PlayerStats.setSanity(sp, 100.0F);
             PlayerStats.sync(sp);
-            if (PlayerStats.isKiller(sp)) killerHunt(sp, level);
+            if (PlayerStats.isKiller(sp)) killerPressure(sp, level);
             return;
         }
 
@@ -331,13 +334,60 @@ public class HorrorDirector {
         }
     }
 
-    /** Assassino: a caça nunca acaba - alucinações hostis surgem para serem mortas. */
-    private void killerHunt(ServerPlayer sp, ServerLevel level) {
+    /** Fortalece uma criatura: +vida e +dano por nível de caçada. */
+    private static void scaleMob(Mob m, int level, double hpPerLevel, double dmgPerLevel) {
+        if (level <= 0) return;
+        AttributeInstance hp = m.getAttribute(Attributes.MAX_HEALTH);
+        if (hp != null) hp.addPermanentModifier(new AttributeModifier("hollowvigil_scale_hp", level * hpPerLevel,
+                AttributeModifier.Operation.ADDITION));
+        AttributeInstance dmg = m.getAttribute(Attributes.ATTACK_DAMAGE);
+        if (dmg != null) dmg.addPermanentModifier(new AttributeModifier("hollowvigil_scale_dmg", level * dmgPerLevel,
+                AttributeModifier.Operation.ADDITION));
+        m.setHealth(m.getMaxHealth());
+    }
+
+    /**
+     * Pressão da caçada (modo assassino, bem mais difícil): alucinações reais em número crescente, um O Oco que
+     * persegue e ataca, e Ceifadores (dois a partir do nível 3). Tudo fica mais forte a cada 3 pontos de caça.
+     */
+    private void killerPressure(ServerPlayer sp, ServerLevel level) {
         int t = hunt.merge(sp.getUUID(), 1, Integer::sum);
-        if (t % 20 != 0) return;
-        List<HallucinationEntity> existing = level.getEntitiesOfClass(HallucinationEntity.class,
-                sp.getBoundingBox().inflate(48.0D), HallucinationEntity::isHostile);
-        if (existing.size() < 3) spawnHallucination(sp, level, true, 1200, 9.0D, 16.0D);
+        int lvl = Modes.huntLevel(sp);
+
+        int every = Math.max(4, 10 - lvl);
+        int maxHall = Math.min(8, 4 + lvl);
+        if (t % every == 0) {
+            List<HallucinationEntity> hall = level.getEntitiesOfClass(HallucinationEntity.class,
+                    sp.getBoundingBox().inflate(64.0D), HallucinationEntity::isHostile);
+            if (hall.size() < maxHall) spawnHallucination(sp, level, true, 6000, 9.0D, 18.0D);
+        }
+        if (t % 55 == 0 && level.getEntitiesOfClass(HollowEntity.class, sp.getBoundingBox().inflate(80.0D)).isEmpty()) {
+            spawnHunter(sp, level, false, lvl);
+        }
+        int reaperEvery = Math.max(40, 80 - lvl * 5);
+        int maxReapers = lvl >= 3 ? 2 : 1;
+        if (HollowConfig.ENABLE_REAPER.get() && t % reaperEvery == 0
+                && level.getEntitiesOfClass(HollowReaperEntity.class, sp.getBoundingBox().inflate(80.0D)).size() < maxReapers) {
+            spawnHunter(sp, level, true, lvl);
+        }
+        if (t % 70 == 0 && HollowConfig.FAKE_CHAT.get()) ChatLines.hollowSays(sp, "killer");
+    }
+
+    private void spawnHunter(ServerPlayer sp, ServerLevel level, boolean reaper, int lvl) {
+        Mob mob = reaper ? ModEntities.HOLLOW_REAPER.get().create(level) : ModEntities.HOLLOW.get().create(level);
+        if (mob == null) return;
+        BlockPos spot = Spots.around(level, sp, 14.0D, 24.0D, sp.getRandom().nextDouble() * Math.PI * 2.0D, Math.PI);
+        if (spot == null) {
+            mob.discard();
+            return;
+        }
+        mob.moveTo(spot.getX() + 0.5D, spot.getY(), spot.getZ() + 0.5D, 0.0F, 0.0F);
+        mob.lookAt(EntityAnchorArgument.Anchor.EYES, sp.getEyePosition());
+        mob.yHeadRot = mob.getYRot();
+        mob.yBodyRot = mob.getYRot();
+        scaleMob(mob, lvl, reaper ? 10.0D : 6.0D, reaper ? 0.8D : 0.5D);
+        level.addFreshEntity(mob);
+        mob.setTarget(sp);
     }
 
     private void spawnHallucination(ServerPlayer sp, ServerLevel level, boolean hostile, int lifetime, double minD, double maxD) {
@@ -350,11 +400,13 @@ public class HorrorDirector {
         ent.yHeadRot = ent.getYRot();
         ent.yBodyRot = ent.getYRot();
         ent.setup(sp.getUUID(), hostile, lifetime);
+        if (hostile && PlayerStats.isKiller(sp)) scaleMob(ent, Modes.huntLevel(sp), 2.0D, 0.4D);
         level.addFreshEntity(ent);
         if (hostile) ent.setTarget(sp);
     }
 
     private void spawnSilhouette(ServerPlayer sp, ServerLevel level) {
+        if (PlayerStats.isKiller(sp)) return;   // para o assassino todas as alucinações são reais e hostis
         List<HallucinationEntity> existing = level.getEntitiesOfClass(HallucinationEntity.class, sp.getBoundingBox().inflate(60.0D));
         if (!existing.isEmpty()) return;
         BlockPos spot = Spots.around(level, sp, 14.0D, 26.0D, Spots.lookAngle(sp), 0.8D);
@@ -698,7 +750,7 @@ public class HorrorDirector {
         ServerLevel level = (ServerLevel) sp.level();
         Entity ent = h.entity == null ? null : level.getEntity(h.entity);
         boolean gone = ent == null || !ent.isAlive();
-        if (!gone && h.ticks > 600) {
+        if (!gone && h.ticks > 600 && !PlayerStats.isKiller(sp)) {
             ent.discard();
             gone = true;
         }

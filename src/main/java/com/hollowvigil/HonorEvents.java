@@ -1,6 +1,7 @@
 package com.hollowvigil;
 
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.animal.Animal;
@@ -11,16 +12,26 @@ import net.minecraft.world.entity.npc.WanderingTrader;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.raid.Raider;
 import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.event.entity.item.ItemTossEvent;
 import net.minecraftforge.event.entity.living.AnimalTameEvent;
 import net.minecraftforge.event.entity.living.BabyEntitySpawnEvent;
 import net.minecraftforge.event.entity.living.LivingChangeTargetEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.living.LivingDropsEvent;
+import net.minecraftforge.event.entity.living.LivingHealEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
-/** Pecados reduzem a honra; boas ações aumentam (alimentar animais, reproduzir, domar, defender). */
+/**
+ * Honra (pecados e boas ações), caçada do assassino, dificuldade do modo assassino
+ * (sem regeneração, entidades batem 50% mais forte) e a faca "soulbound".
+ */
 public class HonorEvents {
+
+    private static boolean isEntity(Entity e) {
+        return e instanceof HollowEntity || e instanceof HollowReaperEntity || e instanceof HallucinationEntity;
+    }
 
     @SubscribeEvent
     public void onDeath(LivingDeathEvent e) {
@@ -28,7 +39,9 @@ public class HonorEvents {
         if (victim.level().isClientSide) return;
         if (!(e.getSource().getEntity() instanceof ServerPlayer sp)) return;
 
-        // caça do assassino
+        if (PlayerStats.isKiller(sp)) Modes.noteKill(sp);   // qualquer morte reinicia o cronômetro da fúria
+
+        // caça do assassino: O Oco (2), Ceifador (4), Alucinação (1)
         int points = victim instanceof HollowReaperEntity ? 4 : victim instanceof HollowEntity ? 2 : victim instanceof HallucinationEntity ? 1 : 0;
         if (points > 0) {
             if (PlayerStats.isKiller(sp)) Modes.onEntityKilled(sp, points);
@@ -64,6 +77,35 @@ public class HonorEvents {
     public void onHurt(LivingHurtEvent e) {
         if (e.getEntity() instanceof AbstractVillager && e.getSource().getEntity() instanceof ServerPlayer sp) {
             PlayerStats.addHonor(sp, -1.5F);
+        }
+        // modo assassino: as entidades batem 50% mais forte
+        if (e.getEntity() instanceof Player p && PlayerStats.isKiller(p) && isEntity(e.getSource().getEntity())) {
+            e.setAmount(e.getAmount() * 1.5F);
+        }
+    }
+
+    /** Modo assassino: sem regeneração. A única cura é matar (feita por setHealth, que não passa por aqui). */
+    @SubscribeEvent
+    public void onHeal(LivingHealEvent e) {
+        if (e.getEntity() instanceof Player p && PlayerStats.isKiller(p)) e.setCanceled(true);
+    }
+
+    /** A faca do assassino nunca fica no chão ao morrer: ela volta junto com o jogador. */
+    @SubscribeEvent
+    public void onDrops(LivingDropsEvent e) {
+        if (e.getEntity() instanceof ServerPlayer sp && PlayerStats.isKiller(sp)) {
+            e.getDrops().removeIf(d -> d.getItem().is(ModItems.KILLER_KNIFE.get()));
+        }
+    }
+
+    /** ...e não pode ser jogada fora. */
+    @SubscribeEvent
+    public void onToss(ItemTossEvent e) {
+        if (e.getPlayer() instanceof ServerPlayer sp && PlayerStats.isKiller(sp)
+                && e.getEntity().getItem().is(ModItems.KILLER_KNIFE.get())) {
+            ItemStack back = e.getEntity().getItem().copy();
+            e.setCanceled(true);
+            if (!sp.getInventory().add(back)) Gifts.drop(sp, back);
         }
     }
 

@@ -12,7 +12,11 @@ Uma presença oca observa você. Tudo acontece SOZINHO (sem comandos).
 - Sobe: **alimentar animais (+1)**, reproduzir (+2), domar (+5), matar saqueadores/monstros. Desce: matar animais, aldeões, golems de vila.
 - **Pecador (≤25):** aparições 3x mais, Ceifador quase sempre, penitência personalizada, Ceifador mata com UM golpe.
 - **Honrado (≥70):** nunca é atacado; recebe presentes (Amuleto, Coração Oco, Lanterna Oca, maçãs, Totem).
-- **0 = ASSASSINO:** sem medo, +vida, força, velocidade, fome lenta, visão vermelha, Faca do Assassino. Missão: caçar as entidades (só ele consegue feri-las).
+- **0 = ASSASSINO (modo difícil):** sem medo e **sem nenhum som de terror**, +20 de vida máxima (enche ao entrar e ao renascer), força, velocidade, fome lenta, visão vermelha.
+  **Sem regeneração**: só se cura matando. As entidades batem 50% mais forte, surgem em número crescente e **ficam mais fortes a cada 3 pontos de caça**
+  (alucinações até 8, O Oco que persegue e ataca, até 2 Ceifadores). **Só você as fere e elas nunca somem enquanto você bate.**
+  **Faca do Assassino**: infinita, **+0,5 de dano a cada ponto de caça**, volta sozinha (não cai ao morrer, não pode ser jogada fora).
+  Missão: 15 pontos (Ceifador 4, O Oco 2, Alucinação 1). **Fúria**: esvazia enquanto você não mata (180 s); a 0 a honra sobe, o modo acaba e você fica **lento e exausto**.
 - **100 = ANJO:** as entidades nunca aparecem, cura todas as criaturas, hostis não o atacam, voa, Herói da Vila.
 
 ## Teste rápido (cheats)

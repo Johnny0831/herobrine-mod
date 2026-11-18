@@ -21,7 +21,8 @@ public class HorrorNet {
     public static void sendStats(ServerPlayer p) {
         CHANNEL.send(PacketDistributor.PLAYER.with(() -> p), new StatsSyncPacket(
                 Math.round(PlayerStats.getSanity(p)), Math.round(PlayerStats.getHonor(p)),
-                PlayerStats.mode(p), PlayerStats.getKills(p), HollowConfig.KILLER_TARGET.get()));
+                PlayerStats.mode(p), PlayerStats.getKills(p), HollowConfig.KILLER_TARGET.get(),
+                Modes.rage(p), PlayerStats.getKnifeLevel(p)));
     }
 
     /** Assassinos "não temem nada" e anjos estão protegidos: efeitos de susto não são enviados. */

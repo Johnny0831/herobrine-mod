@@ -8,6 +8,7 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.DamageTypeTags;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
@@ -24,14 +25,17 @@ import net.minecraft.world.phys.Vec3;
 /**
  * O Oco: fica parado te encarando e só anda quando você não olha. Olhar para ele corrói a sanidade
  * (o diretor faz a conta). Encarado por tempo demais, some - ou surge colado na sua cara.
- * Benevolente (jogador honrado): entrega um presente e vai embora. Só um ASSASSINO consegue feri-lo.
+ * Benevolente (jogador honrado): entrega um presente e vai embora.
+ * Só um ASSASSINO consegue feri-lo - e, contra ele, O Oco nunca some: persegue e ataca até morrer.
  */
 public class HollowEntity extends Monster {
     private static final int STARE_TICKS_TO_VANISH = 50;
     private static final int MAX_LIFETIME = 2400;
+    private static final int MAX_LIFETIME_HUNTING = 12000;
 
     private int stareTicks = 0;
     private int scareTicks = 0;
+    private int attackCooldown = 0;
     private boolean benevolent = false;
 
     public HollowEntity(EntityType<? extends Monster> type, Level level) {
@@ -42,7 +46,8 @@ public class HollowEntity extends Monster {
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
                 .add(Attributes.MAX_HEALTH, 100.0D)
-                .add(Attributes.MOVEMENT_SPEED, 0.25D)
+                .add(Attributes.MOVEMENT_SPEED, 0.27D)
+                .add(Attributes.ATTACK_DAMAGE, 6.0D)
                 .add(Attributes.FOLLOW_RANGE, 64.0D);
     }
 
@@ -66,12 +71,13 @@ public class HollowEntity extends Monster {
             if (--scareTicks == 0) vanish();
             return;
         }
-        if (this.tickCount > MAX_LIFETIME) {
+
+        Player player = this.level().getNearestPlayer(this, 64.0D);
+        boolean hunted = player != null && PlayerStats.isKiller(player);   // alvo é um assassino
+        if (this.tickCount > (hunted ? MAX_LIFETIME_HUNTING : MAX_LIFETIME)) {
             vanish();
             return;
         }
-
-        Player player = this.level().getNearestPlayer(this, 64.0D);
         if (player == null || player.isSpectator()) return;
         if (PlayerStats.isAngel(player)) {   // anjos nunca são vistos
             vanish();
@@ -87,8 +93,14 @@ public class HollowEntity extends Monster {
             return;
         }
 
-        if (PlayerStats.isKiller(player)) {   // o caçador não é intimidado: ele se aproxima para ser caçado
-            if (this.distanceTo(player) > 6.0D && this.tickCount % 30 == 0) this.getNavigation().moveTo(player, 0.8D);
+        if (hunted) {   // contra o assassino: persegue e ataca, nunca recua
+            if (this.tickCount % 10 == 0) this.getNavigation().moveTo(player, 1.15D);
+            if (attackCooldown > 0) attackCooldown--;
+            if (attackCooldown <= 0 && this.distanceToSqr(player) < 6.5D) {
+                attackCooldown = 25;
+                this.swing(InteractionHand.MAIN_HAND);
+                this.doHurtTarget(player);
+            }
             return;
         }
 
@@ -160,14 +172,19 @@ public class HollowEntity extends Monster {
     @Override
     public boolean hurt(DamageSource source, float amount) {
         if (source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) return super.hurt(source, amount);
-        if (source.getEntity() instanceof Player p && PlayerStats.isKiller(p)) return super.hurt(source, amount);
+        if (source.getEntity() instanceof Player p && PlayerStats.isKiller(p)) return super.hurt(source, amount);   // não some ao ser atacado
         if (benevolent) gentleVanish(); else vanish();
         return false;
     }
 
+    private boolean nearKiller() {
+        Player near = this.level().getNearestPlayer(this, 48.0D);
+        return near != null && PlayerStats.isKiller(near);
+    }
+
     @Override
     protected SoundEvent getAmbientSound() {
-        return benevolent ? null : ModSounds.HOLLOW_IDLE.get();
+        return (benevolent || nearKiller()) ? null : ModSounds.HOLLOW_IDLE.get();
     }
 
     @Override
@@ -177,12 +194,12 @@ public class HollowEntity extends Monster {
 
     @Override
     protected SoundEvent getHurtSound(DamageSource src) {
-        return ModSounds.STATIC_BURST.get();
+        return nearKiller() ? SoundEvents.ENDERMAN_HURT : ModSounds.STATIC_BURST.get();
     }
 
     @Override
     protected SoundEvent getDeathSound() {
-        return ModSounds.SCREAM_FAR.get();
+        return nearKiller() ? SoundEvents.ENDERMAN_DEATH : ModSounds.SCREAM_FAR.get();
     }
 
     @Override

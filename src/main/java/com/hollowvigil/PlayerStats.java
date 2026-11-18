@@ -24,7 +24,8 @@ public final class PlayerStats {
 
     private static final String K_SANITY = "hv_sanity", K_HONOR = "hv_honor", K_ANIMALS = "hv_animals",
             K_VILLAGERS = "hv_villagers", K_DREAD = "hv_dread", K_INTRO = "hv_intro",
-            K_KILLER = "hv_killer", K_KILLS = "hv_kills", K_ANGEL = "hv_angel", K_ANGEL_FLY = "hv_angel_fly";
+            K_KILLER = "hv_killer", K_KILLS = "hv_kills", K_ANGEL = "hv_angel", K_ANGEL_FLY = "hv_angel_fly",
+            K_LAST_KILL = "hv_last_kill", K_KNIFE_LVL = "hv_knife_lvl";
 
     public static CompoundTag data(Player p) {
         CompoundTag root = p.getPersistentData();
@@ -95,6 +96,12 @@ public final class PlayerStats {
     public static int getKills(Player p) { return data(p).getInt(K_KILLS); }
     public static void setKills(Player p, int v) { data(p).putInt(K_KILLS, Math.max(0, v)); }
     public static int mode(Player p) { return isKiller(p) ? 1 : isAngel(p) ? 2 : 0; }
+
+    public static long getLastKill(Player p) { return data(p).getLong(K_LAST_KILL); }
+    public static void setLastKill(Player p, long v) { data(p).putLong(K_LAST_KILL, v); }
+    public static int getKnifeLevel(Player p) { return data(p).getInt(K_KNIFE_LVL); }
+    public static void setKnifeLevel(Player p, int v) { data(p).putInt(K_KNIFE_LVL, Math.max(0, v)); }
+    public static void addKnifeLevel(Player p, int v) { setKnifeLevel(p, getKnifeLevel(p) + v); }
 
     // ---- contadores
     public static int getAnimalsKilled(Player p) { return data(p).getInt(K_ANIMALS); }

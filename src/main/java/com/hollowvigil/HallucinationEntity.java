@@ -72,6 +72,7 @@ public class HallucinationEntity extends Monster {
             return;
         }
 
+        if (!hostile && PlayerStats.isKiller(p)) hostile = true;   // para o assassino todas são reais e não somem
         if (hostile) {
             this.setTarget(p);
             if (PlayerStats.getSanity(p) >= 25.0F && !PlayerStats.isKiller(p)) fade();

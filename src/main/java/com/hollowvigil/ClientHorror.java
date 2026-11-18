@@ -30,7 +30,7 @@ public class ClientHorror {
     private static float clientTime;
 
     // estado sincronizado
-    private static int sanity = 100, honor = 50, mode = 0, kills = 0, target = 15;
+    private static int sanity = 100, honor = 50, mode = 0, kills = 0, target = 15, rage = 100, knife = 0;
     private static float dispSanity = 100.0F, dispHonor = 50.0F;
     private static int lossFlash = 0, gainFlash = 0;
 
@@ -47,6 +47,8 @@ public class ClientHorror {
         mode = p.mode();
         kills = p.kills();
         target = Math.max(1, p.target());
+        rage = p.rage();
+        knife = p.knife();
     }
 
     public static void receive(HorrorEffectPacket p) {
@@ -311,6 +313,17 @@ public class ClientHorror {
         g.blit(HUD, x, by, 0, 0, HudAtlas.FRAME_W, HudAtlas.FRAME_H, tw, th);
         int fw = Math.max(0, Math.min(HudAtlas.FILL_W, Math.round(HudAtlas.FILL_W * Math.min(1.0F, kills / (float) target))));
         if (fw > 0) g.blit(HUD, x + 4, by + 3, 0, HudAtlas.FILL_MISSION_V, fw, HudAtlas.FILL_H, tw, th);
+
+        // Fúria: esvazia enquanto você não mata; chegando a zero o modo termina (exaustão)
+        int ry = by + 20;
+        boolean fading = rage < 35;
+        g.drawString(font, Component.translatable("hud.hollowvigil.rage"), x, ry, fading ? 0xFFFF5A4A : 0xFFFFA860, true);
+        int rw = Math.max(0, Math.min(102, Math.round(102.0F * rage / 100.0F)));
+        int rc = rage > 60 ? 0xFFFF8A2A : rage > 30 ? 0xFFFF5A1A : (Mth.sin(clientTime * 0.5F) > 0 ? 0xFFE02020 : 0xFF8E1010);
+        g.fill(x, ry + 10, x + 104, ry + 16, 0xFF000000);
+        g.fill(x + 1, ry + 11, x + 103, ry + 15, 0xFF2A1210);
+        if (rw > 0) g.fill(x + 1, ry + 11, x + 1 + rw, ry + 15, rc);
+        g.drawString(font, Component.translatable("hud.hollowvigil.knife", knife), x, ry + 19, 0xFFE0E0F0, true);
     }
 
     private static void angelRow(GuiGraphics g, Font font, int x, int y, float honorFrac) {

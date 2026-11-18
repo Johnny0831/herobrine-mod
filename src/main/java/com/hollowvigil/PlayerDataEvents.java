@@ -25,11 +25,15 @@ public class PlayerDataEvents {
         if (old.contains(Player.PERSISTED_NBT_TAG)) {
             e.getEntity().getPersistentData().put(Player.PERSISTED_NBT_TAG, old.getCompound(Player.PERSISTED_NBT_TAG).copy());
         }
-        if (e.isWasDeath()) PlayerStats.setSanity(e.getEntity(), 70.0F);
+        if (e.isWasDeath()) {
+            // assassinos e anjos não têm medo: a sanidade não cai por morrer (antes caía a 70 e voltava a 100)
+            boolean fearless = PlayerStats.isKiller(e.getEntity()) || PlayerStats.isAngel(e.getEntity());
+            PlayerStats.setSanity(e.getEntity(), fearless ? 100.0F : 70.0F);
+        }
     }
 
     @SubscribeEvent
     public void onRespawn(PlayerEvent.PlayerRespawnEvent e) {
-        if (e.getEntity() instanceof ServerPlayer sp) PlayerStats.sync(sp);
+        if (e.getEntity() instanceof ServerPlayer sp) Modes.onRespawn(sp);
     }
 }
